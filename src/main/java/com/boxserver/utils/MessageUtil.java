@@ -36,7 +36,7 @@ public class MessageUtil {
      * Replace placeholders in a message.
      */
     public static String replacePlaceholders(String message, String... replacements) {
-        if (message == null || replacements == null || replacements.length < 2) {
+        if (message == null || replacements == null || replacements.length == 0 || replacements.length % 2 != 0) {
             return message;
         }
         String result = message;

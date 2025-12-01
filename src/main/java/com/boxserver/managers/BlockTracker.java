@@ -96,6 +96,7 @@ public class BlockTracker {
 
     /**
      * Get all tracked blocks in a region.
+     * Uses chunk-based filtering for better performance.
      */
     public List<Location> getTrackedBlocksInRegion(Region region) {
         List<Location> locations = new ArrayList<>();
@@ -105,11 +106,26 @@ public class BlockTracker {
             return locations;
         }
 
-        // Iterate through all tracked blocks and check if they're in the region
-        for (String key : blockTimestamps.keySet()) {
-            Location loc = parseLocationKey(key, world);
-            if (loc != null && region.contains(loc)) {
-                locations.add(loc);
+        // Calculate which chunks overlap with the region
+        int minChunkX = region.getMinX() >> 4;
+        int maxChunkX = region.getMaxX() >> 4;
+        int minChunkZ = region.getMinZ() >> 4;
+        int maxChunkZ = region.getMaxZ() >> 4;
+
+        // Only iterate through chunks that overlap with the region
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                long chunkKey = ((long) cx << 32) | (cz & 0xFFFFFFFFL);
+                Set<String> blocksInChunk = chunkBlocks.get(chunkKey);
+                
+                if (blocksInChunk != null) {
+                    for (String key : blocksInChunk) {
+                        Location loc = parseLocationKey(key, world);
+                        if (loc != null && region.contains(loc)) {
+                            locations.add(loc);
+                        }
+                    }
+                }
             }
         }
 

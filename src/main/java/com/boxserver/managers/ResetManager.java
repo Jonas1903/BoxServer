@@ -7,19 +7,25 @@ import com.boxserver.utils.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Manages the automatic reset of player-placed blocks in PvP regions.
  */
 public class ResetManager {
     private final BoxServer plugin;
     private BukkitTask resetTask;
-    private long lastResetTime;
+    private final List<BukkitTask> warningTasks;
     private int resetIntervalMinutes;
+
+    // Warning times in seconds before reset
+    private static final int[] WARNING_TIMES = {60, 30, 10, 5};
 
     public ResetManager(BoxServer plugin) {
         this.plugin = plugin;
+        this.warningTasks = new ArrayList<>();
         this.resetIntervalMinutes = plugin.getConfig().getInt("reset-interval-minutes", 10);
-        this.lastResetTime = System.currentTimeMillis();
         startResetTask();
     }
 
@@ -32,13 +38,42 @@ public class ResetManager {
         // Convert minutes to ticks (20 ticks = 1 second)
         long intervalTicks = resetIntervalMinutes * 60L * 20L;
 
-        // Warning task - runs every second to check for warnings
-        Bukkit.getScheduler().runTaskTimer(plugin, this::checkWarnings, 20L, 20L);
+        // Schedule warning tasks at specific times before reset
+        scheduleWarnings(intervalTicks);
 
-        // Reset task
-        resetTask = Bukkit.getScheduler().runTaskTimer(plugin, this::performReset, intervalTicks, intervalTicks);
+        // Schedule the reset task
+        resetTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            performReset();
+            // Reschedule warnings for the next cycle
+            scheduleWarnings(intervalTicks);
+        }, intervalTicks, intervalTicks);
 
         plugin.getLogger().info("Started reset task with interval of " + resetIntervalMinutes + " minutes.");
+    }
+
+    /**
+     * Schedule warning messages at specific times before the next reset.
+     */
+    private void scheduleWarnings(long intervalTicks) {
+        // Cancel any existing warning tasks
+        for (BukkitTask task : warningTasks) {
+            task.cancel();
+        }
+        warningTasks.clear();
+
+        String warningMessage = plugin.getConfig().getString("messages.reset-warning", "&eBlock reset in %time% seconds!");
+
+        for (int seconds : WARNING_TIMES) {
+            long warningTicks = intervalTicks - (seconds * 20L);
+            if (warningTicks > 0) {
+                final int warningSeconds = seconds;
+                BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    String message = MessageUtil.replacePlaceholders(warningMessage, "%time%", String.valueOf(warningSeconds));
+                    broadcastToPlayers(message);
+                }, warningTicks);
+                warningTasks.add(task);
+            }
+        }
     }
 
     /**
@@ -49,22 +84,10 @@ public class ResetManager {
             resetTask.cancel();
             resetTask = null;
         }
-    }
-
-    /**
-     * Check and send warning messages before reset.
-     */
-    private void checkWarnings() {
-        long timeUntilReset = getTimeUntilReset();
-        long seconds = timeUntilReset / 1000;
-
-        String warningMessage = plugin.getConfig().getString("messages.reset-warning", "&eBlock reset in %time% seconds!");
-
-        // Send warnings at 60, 30, and 10 seconds
-        if (seconds == 60 || seconds == 30 || seconds == 10 || seconds == 5) {
-            String message = MessageUtil.replacePlaceholders(warningMessage, "%time%", String.valueOf(seconds));
-            broadcastToPlayers(message);
+        for (BukkitTask task : warningTasks) {
+            task.cancel();
         }
+        warningTasks.clear();
     }
 
     /**
@@ -77,8 +100,6 @@ public class ResetManager {
             totalReset += plugin.getBlockTracker().resetBlocksInRegion(region);
         }
 
-        lastResetTime = System.currentTimeMillis();
-
         String resetMessage = plugin.getConfig().getString("messages.reset-complete", "&aAll placed blocks have been reset!");
         broadcastToPlayers(resetMessage);
 
@@ -90,15 +111,6 @@ public class ResetManager {
      */
     public int resetRegion(Region region) {
         return plugin.getBlockTracker().resetBlocksInRegion(region);
-    }
-
-    /**
-     * Get the time until the next reset in milliseconds.
-     */
-    public long getTimeUntilReset() {
-        long elapsed = System.currentTimeMillis() - lastResetTime;
-        long interval = resetIntervalMinutes * 60L * 1000L;
-        return Math.max(0, interval - elapsed);
     }
 
     /**
@@ -130,7 +142,6 @@ public class ResetManager {
      */
     public void reload() {
         this.resetIntervalMinutes = plugin.getConfig().getInt("reset-interval-minutes", 10);
-        this.lastResetTime = System.currentTimeMillis();
         startResetTask();
     }
 }

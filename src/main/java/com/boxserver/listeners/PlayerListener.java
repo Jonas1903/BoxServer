@@ -101,11 +101,13 @@ public class PlayerListener implements Listener {
 
         // Handle player pushing prevention in spawn
         if (toRegion != null && toRegion.getType() == RegionType.SPAWN) {
-            // Check if player is being pushed by another player's velocity
             Vector velocity = player.getVelocity();
-            if (velocity.length() > 0.5 && !player.isSprinting() && !player.isFlying()) {
-                // This is likely being pushed - reduce the velocity
-                player.setVelocity(velocity.multiply(0.1));
+            // Only reduce horizontal velocity (X and Z), not vertical (Y) to allow jumping/falling
+            // Check for significant horizontal velocity that indicates being pushed
+            double horizontalSpeed = Math.sqrt(velocity.getX() * velocity.getX() + velocity.getZ() * velocity.getZ());
+            if (horizontalSpeed > 0.5 && !player.isSprinting() && !player.isFlying() && player.isOnGround()) {
+                // Reduce only horizontal velocity, preserve vertical
+                player.setVelocity(new Vector(velocity.getX() * 0.1, velocity.getY(), velocity.getZ() * 0.1));
             }
         }
     }
