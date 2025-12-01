@@ -1,0 +1,14 @@
+# BoxServer Configuration
+
+# Time interval in minutes between automatic block resets in PvP regions
+reset-interval-minutes: 10
+
+# Custom messages (supports & color codes)
+messages:
+  no-break: "&cYou cannot break blocks here!"
+  no-place: "&cYou cannot place blocks here!"
+  no-pvp: "&cPvP is disabled in this area!"
+  no-windcharge: "&cWind charges are disabled in this area!"
+  too-high: "&cYou cannot place blocks this high!"
+  reset-warning: "&eBlock reset in %time% seconds!"
+  reset-complete: "&aAll placed blocks have been reset!"

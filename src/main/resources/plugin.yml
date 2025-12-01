@@ -1,0 +1,35 @@
+name: BoxServer
+version: '${project.version}'
+main: com.boxserver.BoxServer
+api-version: '1.21'
+description: A Minecraft Paper plugin for managing a Box Server arena with spawn and PvP regions
+author: BoxServer
+
+commands:
+  boxserver:
+    description: Main command for BoxServer plugin
+    usage: /<command> <subcommand> [args]
+    aliases: [bs]
+
+permissions:
+  boxserver.admin:
+    description: Bypass all protection rules
+    default: op
+  boxserver.command.region:
+    description: Manage regions
+    default: op
+  boxserver.command.blocks:
+    description: Manage block whitelists
+    default: op
+  boxserver.command.reload:
+    description: Reload configuration
+    default: op
+  boxserver.command.reset:
+    description: Manual reset command
+    default: op
+  boxserver.bypass.build:
+    description: Bypass build restrictions
+    default: false
+  boxserver.bypass.pvp:
+    description: Bypass PvP restrictions
+    default: false
