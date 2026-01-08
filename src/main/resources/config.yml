@@ -7,6 +7,7 @@ reset-interval-minutes: 10
 messages:
   no-break: "&cYou cannot break blocks here!"
   no-place: "&cYou cannot place blocks here!"
+  no-water: "&cYou cannot place water here!"
   no-pvp: "&cPvP is disabled in this area!"
   no-windcharge: "&cWind charges are disabled in this area!"
   too-high: "&cYou cannot place blocks this high!"
