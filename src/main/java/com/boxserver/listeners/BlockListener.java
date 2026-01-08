@@ -62,37 +62,41 @@ public class BlockListener implements Listener {
         Location location = block.getLocation();
 
         // Check for admin bypass
-        if (player.hasPermission("boxserver.admin") || player.hasPermission("boxserver.bypass.build")) {
-            return;
-        }
+        boolean hasAdminBypass = player.hasPermission("boxserver.admin") || player.hasPermission("boxserver.bypass.build");
+        
+        if (!hasAdminBypass) {
+            Region region = plugin.getRegionManager().getRegionAt(location);
+            if (region == null) {
+                return;
+            }
 
-        Region region = plugin.getRegionManager().getRegionAt(location);
-        if (region == null) {
-            return;
-        }
-
-        // Check if blocks can be placed in this region
-        if (!region.canPlace()) {
-            event.setCancelled(true);
-            String message = plugin.getConfig().getString("messages.no-place", "&cYou cannot place blocks here!");
-            MessageUtil.send(player, message);
-            return;
-        }
-
-        // PvP region height restriction - cannot place blocks more than 6 blocks above ceiling
-        if (region.getType() == RegionType.PVP) {
-            int ceilingY = region.getCeilingY();
-            int blockY = location.getBlockY();
-            
-            if (blockY > ceilingY + 6) {
+            // Check if blocks can be placed in this region
+            if (!region.canPlace()) {
                 event.setCancelled(true);
-                String message = plugin.getConfig().getString("messages.too-high", "&cYou cannot place blocks this high!");
+                String message = plugin.getConfig().getString("messages.no-place", "&cYou cannot place blocks here!");
                 MessageUtil.send(player, message);
                 return;
             }
 
-            // Track the placed block for reset feature
-            plugin.getBlockTracker().trackBlock(block);
+            // PvP region height restriction - cannot place blocks more than 6 blocks above ceiling
+            if (region.getType() == RegionType.PVP) {
+                int ceilingY = region.getCeilingY();
+                int blockY = location.getBlockY();
+                
+                if (blockY > ceilingY + 6) {
+                    event.setCancelled(true);
+                    String message = plugin.getConfig().getString("messages.too-high", "&cYou cannot place blocks this high!");
+                    MessageUtil.send(player, message);
+                    return;
+                }
+            }
+        }
+        
+        // Track blocks placed in PVP regions (operator status is considered)
+        Region region = plugin.getRegionManager().getRegionAt(location);
+        if (region != null && region.getType() == RegionType.PVP) {
+            boolean isOperator = player.hasPermission("boxserver.admin") || player.hasPermission("boxserver.bypass.build");
+            plugin.getBlockTracker().trackBlock(block, isOperator);
         }
     }
 
@@ -140,6 +144,13 @@ public class BlockListener implements Listener {
                     return;
                 }
             }
+            
+            // Update tracking for moved blocks
+            if (plugin.getBlockTracker().isTracked(block)) {
+                plugin.getBlockTracker().untrackBlock(block);
+                Block targetBlock = block.getRelative(event.getDirection());
+                plugin.getBlockTracker().trackBlock(targetBlock, false);
+            }
         }
     }
 
@@ -162,6 +173,13 @@ public class BlockListener implements Listener {
                     event.setCancelled(true);
                     return;
                 }
+            }
+            
+            // Update tracking for moved blocks
+            if (plugin.getBlockTracker().isTracked(block)) {
+                plugin.getBlockTracker().untrackBlock(block);
+                Block targetBlock = block.getRelative(event.getDirection());
+                plugin.getBlockTracker().trackBlock(targetBlock, false);
             }
         }
     }

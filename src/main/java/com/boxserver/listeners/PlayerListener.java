@@ -10,12 +10,15 @@ import org.bukkit.entity.WindCharge;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
@@ -132,6 +135,54 @@ public class PlayerListener implements Listener {
                     event.setCancelled(true);
                     MessageUtil.send(player, "&cYou cannot ender pearl into this area!");
                 }
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerBucketEmpty(PlayerBucketEmptyEvent event) {
+        Player player = event.getPlayer();
+        Block block = event.getBlock();
+        Location location = block.getLocation();
+        Material bucket = event.getBucket();
+
+        // Only handle water buckets
+        if (bucket != Material.WATER_BUCKET) {
+            return;
+        }
+
+        // Check for admin bypass
+        boolean hasAdminBypass = player.hasPermission("boxserver.admin") || player.hasPermission("boxserver.bypass.build");
+        
+        if (!hasAdminBypass) {
+            Region region = plugin.getRegionManager().getRegionAt(location);
+            
+            // Prevent water bucket placement in SPAWN and PROTECTED regions
+            if (region != null && 
+                (region.getType() == RegionType.SPAWN || 
+                 region.getType() == RegionType.PROTECTED)) {
+                event.setCancelled(true);
+                String message = plugin.getConfig().getString("messages.no-water", "&cYou cannot place water here!");
+                MessageUtil.send(player, message);
+                return;
+            }
+            
+            // Track water source blocks in PVP regions
+            if (region != null && region.getType() == RegionType.PVP) {
+                // Schedule tracking after the water block is placed
+                plugin.getServer().getScheduler().runTask(plugin, () -> {
+                    Block waterBlock = block.getRelative(event.getBlockFace());
+                    if (waterBlock.getType() == Material.WATER) {
+                        plugin.getBlockTracker().trackBlock(waterBlock, false);
+                    }
+                });
+            }
+        } else {
+            // Operator placed water - don't track it
+            Region region = plugin.getRegionManager().getRegionAt(location);
+            if (region != null && region.getType() == RegionType.PVP) {
+                // Operators' water blocks are not tracked (won't be removed during reset)
+                // No action needed as trackBlock with placedByOperator=true will skip tracking
             }
         }
     }
