@@ -1,11 +1,11 @@
 # BoxServer
 
-A Minecraft Paper 1.21.4+ plugin for managing a "Box Server" - a cube arena with spawn and PvP regions with specific protection rules.
+A Minecraft Paper 1.21.8+ plugin for managing a "Box Server" - a cube arena with spawn and PvP regions with specific protection rules.
 
 ## Requirements
 
-- **Minecraft Version:** 1.21.4+
-- **Java Version:** 22
+- **Minecraft Version:** 1.21.8+
+- **Java Version:** 21
 - **Server Software:** Paper
 
 ## Building
