@@ -38,7 +38,18 @@ public class BlockTracker {
      * Track a placed block.
      */
     public void trackBlock(Block block) {
-        if (block == null) {
+        trackBlock(block, false);
+    }
+
+    /**
+     * Track a placed block with operator status.
+     * Only non-operator blocks are tracked.
+     * 
+     * @param block The block to track
+     * @param placedByOperator Whether the block was placed by an operator
+     */
+    public void trackBlock(Block block, boolean placedByOperator) {
+        if (block == null || placedByOperator) {
             return;
         }
 
